@@ -1,1 +1,1 @@
-# CS_432_Project2
+#Databases Project 2
