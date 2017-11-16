@@ -17,14 +17,14 @@ start with 10000
 maxvalue 99999
 increment by 1;
 
-drop table customers;
-drop table discounts;
-drop table employees;
-drop table logs;
-drop table products;
-drop table purchases;
-drop table suppliers;
 drop table supplies;
+drop table suppliers;
+drop table purchases;
+drop table products;
+drop table discounts;
+drop table logs;
+drop table employees;
+drop table customers;
 
 create table customers
 (cid char(4) primary key,
@@ -82,3 +82,16 @@ operation varchar2(6) not null,
 op_time date not null,
 table_name varchar2(20) not null,
 tuple_pkey varchar2(6)); 
+
+--q2 function
+create or replace function showTable(tbl varchar2)
+return sys_refcursor
+is
+rc sys_refcursor;
+sqlstmt varchar(255);
+begin
+sqlstmt := 'select * from '||tbl;
+open rc for sqlstmt;
+return rc;
+end;
+/
