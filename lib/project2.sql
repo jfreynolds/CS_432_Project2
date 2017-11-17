@@ -83,8 +83,18 @@ op_time date not null,
 table_name varchar2(20) not null,
 tuple_pkey varchar2(6)); 
 
+insert into customers values ('1001', 'John Null', '123-456-7890', 1, SYSDATE);
+insert into customers values ('1002', 'John Reynolds', '555-555-5555', 3, SYSDATE);
+
 --q2 function
-create or replace function showTable(tbl varchar2)
+create or replace package instructions as
+function showTable(tbl in varchar2)
+return sys_refcursor;
+end instructions;
+/
+
+create or replace package body instructions as
+function showTable(tbl in varchar2)
 return sys_refcursor
 is
 rc sys_refcursor;
@@ -94,4 +104,5 @@ sqlstmt := 'select * from '||tbl;
 open rc for sqlstmt;
 return rc;
 end;
+end instructions;
 /
