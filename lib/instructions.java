@@ -20,7 +20,7 @@ public class instructions{
 
 	public void showTable(String tblname){
 		try{
-			CallableStatement cs = conn.prepareCall("begin ? := showTable(?); end;");
+			CallableStatement cs = conn.prepareCall("begin ? := instructions.showTable(?); end;");
 			cs.setString(2, tblname);
 			cs.registerOutParameter(1, OracleTypes.CURSOR);
 			cs.execute();
