@@ -86,14 +86,26 @@ tuple_pkey varchar2(6));
 insert into customers values ('1001', 'John Null', '123-456-7890', 1, SYSDATE);
 insert into customers values ('1002', 'John Reynolds', '555-555-5555', 3, SYSDATE);
 
---q2 function
+insert into employees values ('001', 'Tommy Wiseau', '111-222-3333', 'temp');
+
+insert into discounts values (1, 0.25);
+
+insert into products values ('1001', 'TV', 10, 2, 1000.00, 1);
+
+insert into purchases values (100000, '001', '1001', '1001', 2, SYSDATE, 1500.00);
+
 create or replace package instructions as
 function showTable(tbl in varchar2)
 return sys_refcursor;
+
+function purchase_saving(pur# in purchases.pur#%type)
+return number;
 end instructions;
 /
 
 create or replace package body instructions as
+
+--Function for Question 2
 function showTable(tbl in varchar2)
 return sys_refcursor
 is
@@ -104,5 +116,33 @@ sqlstmt := 'select * from '||tbl;
 open rc for sqlstmt;
 return rc;
 end;
+
+--Function for Question 3
+function purchase_saving(pur# in purchases.pur#%type) 
+return number
+is
+saving number(10,2);
+countPur# number(6);
+begin
+    --Check that the argument is not null
+    if(pur# is NULL) then
+        raise_application_error(-20001, 'Pur# argument is null');
+    end if;
+
+    --Check to see if the pur# is present in table
+    select count(*) into countPur# from purchases where purchases.pur# = pur#;
+
+    if(countPur# < 1) then
+        raise_application_error(-20002, 'Pur# not present in the table');
+    end if;
+
+    select (original_price * qty) - total_price into saving
+      from purchases
+           inner join products
+           on purchases.pid = products.pid
+     where purchases.pur# = pur#;
+    return saving;
+end;
+
 end instructions;
 /
