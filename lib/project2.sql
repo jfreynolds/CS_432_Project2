@@ -105,7 +105,12 @@ return sys_refcursor;
 function purchase_saving(pur# in purchases.pur#%type)
 return number;
 
-procedure monthly_sale_activities(eidArg in employees.eid%type, rc out sys_refcursor);
+procedure monthly_sale_activities(eidArg in employees.eid%type,
+                                  rc out sys_refcursor);
+
+procedure add_customer(c_id in customers.cid%type,
+                       c_name customers.name%type, 
+                       c_telephone# customers.telephone#%type);
 end instructions;
 /
 
@@ -151,20 +156,21 @@ begin
 end;
 
 --Procedure for Question 4
-procedure monthly_sale_activities(eidArg in employees.eid%type, rc out sys_refcursor)
+procedure monthly_sale_activities(eidArg in employees.eid%type,
+                                  rc out sys_refcursor)
 is
 countEid number(4);
 begin
     --Check that the argument is not null
     if(eidArg is NULL) then
-        raise_application_error(-20003, 'Eid argument is null');
+        raise_application_error(-20001, 'Eid argument is null');
     end if;
 
     --Check to see if the eid is present in table
     select count(*) into countEid from employees where eidArg = eid;
 
     if(countEid < 1) then
-        raise_application_error(-20004, 'Eid not present in the table');
+        raise_application_error(-20002, 'Eid not present in the table');
     end if;
 
     open rc for
@@ -179,6 +185,35 @@ begin
            on e.eid = pur.eid
      where eidArg = e.eid
      group by e.eid, e.name, to_char(ptime, 'MON'), to_char(ptime, 'YYYY');
+end;
+
+--Procedure for Question 5
+--INT VALUE ARGUMENTS ARE CONVERTED TO STRINGS AND BEING INSERTED
+--NOT SURE IF CORRECT
+procedure add_customer(c_id in customers.cid%type,
+                       c_name in customers.name%type,
+                       c_telephone# in customers.telephone#%type)
+is
+string_arg_too_big exception;
+pragma exception_init(string_arg_too_big, -12899);
+begin
+    if(c_id is NULL) then
+        raise_application_error(-20001, 'C_id argument is null');
+    elsif(c_name is NULL) then
+        raise_application_error(-20001, 'C_name argument is null');
+    elsif(c_telephone# is NULL) then
+        raise_application_error(-20001, 'C_telephone# argument is null');
+    end if;
+
+    insert into customers values (c_id, c_name, c_telephone#, 1, SYSDATE);
+
+exception
+    --Primary key is already in the table
+    when dup_val_on_index then
+        raise_application_error(-20003, 'C_id argument ' || c_id || ' already exists in the table. Failed to add customer to table.');
+    --One of the string arguments is larger than defined in table
+    when string_arg_too_big then
+        raise_application_error(-20004, 'String argument passed into procedure is too long. Failed to add customer to table.');
 end;
 
 end instructions;
