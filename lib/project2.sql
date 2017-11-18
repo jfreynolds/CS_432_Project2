@@ -83,16 +83,20 @@ op_time date not null,
 table_name varchar2(20) not null,
 tuple_pkey varchar2(6)); 
 
-insert into customers values ('1001', 'John Null', '123-456-7890', 1, SYSDATE);
-insert into customers values ('1002', 'John Reynolds', '555-555-5555', 3, SYSDATE);
+insert into customers values ('c001', 'John Null', '123-456-7890', 1, SYSDATE);
+insert into customers values ('c002', 'John Reynolds', '555-555-5555', 3, SYSDATE);
 
-insert into employees values ('001', 'Tommy Wiseau', '111-222-3333', 'temp');
+insert into employees values ('e01', 'Tommy Wiseau', '111-222-3333', 'tm1@bing.edu');
+insert into employees values ('e02', 'Cassie Smith', '222-333-4444', 'cs1@bing.edu');
 
 insert into discounts values (1, 0.25);
 
-insert into products values ('1001', 'TV', 10, 2, 1000.00, 1);
+insert into products values ('p001', 'TV', 10, 2, 1000.00, 1);
 
-insert into purchases values (100000, '001', '1001', '1001', 2, SYSDATE, 1500.00);
+insert into purchases values (100000, 'e01', 'p001', 'c001', 2, SYSDATE, 1500.00);
+insert into purchases values (100001, 'e01', 'p001', 'c002', 1, SYSDATE, 750.00);
+insert into purchases values (100002, 'e01', 'p001', 'c002', 1, to_date('12-AUG-2017 10:34:30', 'DD-MON-YYYY HH24:MI:SS'), 750.00);
+insert into purchases values (100003, 'e02', 'p001', 'c001', 1, SYSDATE, 750.00);
 
 create or replace package instructions as
 function showTable(tbl in varchar2)
@@ -100,6 +104,8 @@ return sys_refcursor;
 
 function purchase_saving(pur# in purchases.pur#%type)
 return number;
+
+procedure monthly_sale_activities(eidArg in employees.eid%type, rc out sys_refcursor);
 end instructions;
 /
 
@@ -122,7 +128,7 @@ function purchase_saving(pur# in purchases.pur#%type)
 return number
 is
 saving number(10,2);
-countPur# number(6);
+countPur# number(4);
 begin
     --Check that the argument is not null
     if(pur# is NULL) then
@@ -142,6 +148,37 @@ begin
            on purchases.pid = products.pid
      where purchases.pur# = pur#;
     return saving;
+end;
+
+--Procedure for Question 4
+procedure monthly_sale_activities(eidArg in employees.eid%type, rc out sys_refcursor)
+is
+countEid number(4);
+begin
+    --Check that the argument is not null
+    if(eidArg is NULL) then
+        raise_application_error(-20003, 'Eid argument is null');
+    end if;
+
+    --Check to see if the eid is present in table
+    select count(*) into countEid from employees where eidArg = eid;
+
+    if(countEid < 1) then
+        raise_application_error(-20004, 'Eid not present in the table');
+    end if;
+
+    open rc for
+    select e.eid, e.name, 
+           to_char(ptime, 'MON') as Month,
+           to_char(ptime, 'YYYY') as Year,
+           count(*) as Total_Purchases,
+           sum(qty) as Total_Qty_Sold,
+           sum(total_price) as Total_Price
+      from employees e
+           inner join purchases pur
+           on e.eid = pur.eid
+     where eidArg = e.eid
+     group by e.eid, e.name, to_char(ptime, 'MON'), to_char(ptime, 'YYYY');
 end;
 
 end instructions;
