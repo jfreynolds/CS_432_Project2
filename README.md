@@ -7,3 +7,5 @@ that should work that way.
 
 Question 2 says we **need** to implement 8 functions or procedures for each table. Might be worth asking him if one function still
 works
+
+ssh -AY name@host executable_name
