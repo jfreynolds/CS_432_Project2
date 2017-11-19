@@ -148,8 +148,8 @@ create or replace package instructions as
 function showTable(tbl in varchar2)
 return sys_refcursor;
 
-function purchase_saving(pur# in purchases.pur#%type)
-return number;
+function purchase_saving(pur#Arg in purchases.pur#%type)
+return sys_refcursor;
 
 procedure monthly_sale_activities(eidArg in employees.eid%type,
                                   rc out sys_refcursor);
@@ -157,6 +157,7 @@ procedure monthly_sale_activities(eidArg in employees.eid%type,
 procedure add_customer(c_id in customers.cid%type,
                        c_name customers.name%type, 
                        c_telephone# customers.telephone#%type);
+
 end instructions;
 /
 
@@ -175,30 +176,31 @@ return rc;
 end;
 
 --Function for Question 3
-function purchase_saving(pur# in purchases.pur#%type) 
-return number
+function purchase_saving(pur#Arg in purchases.pur#%type) 
+return sys_refcursor
 is
-saving number(10,2);
+rc sys_refcursor;
 countPur# number(4);
 begin
     --Check that the argument is not null
-    if(pur# is NULL) then
+    if(pur#Arg is NULL) then
         raise_application_error(-20001, 'Pur# argument is null');
     end if;
 
     --Check to see if the pur# is present in table
-    select count(*) into countPur# from purchases where purchases.pur# = pur#;
+    select count(*) into countPur# from purchases where purchases.pur# = pur#Arg;
 
     if(countPur# < 1) then
         raise_application_error(-20002, 'Pur# not present in the table');
     end if;
 
-    select (original_price * qty) - total_price into saving
+    open rc for
+    select (original_price * qty) - total_price
       from purchases
            inner join products
            on purchases.pid = products.pid
-     where purchases.pur# = pur#;
-    return saving;
+     where purchases.pur# = pur#Arg;
+    return rc;
 end;
 
 --Procedure for Question 4
