@@ -117,6 +117,14 @@ begin
 end;
 /
 
+create or replace trigger insertPurchasesTrigger
+after insert on purchases
+for each row
+begin
+    insert into logs values (log#_seq.NEXTVAL, USER, 'Insert', SYSDATE, 'Purchases', :NEW.pur#);
+end;
+/
+
 create or replace trigger updateQohTrigger
 after update of qoh on products
 for each row
