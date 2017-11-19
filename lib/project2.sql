@@ -93,10 +93,48 @@ insert into discounts values (1, 0.25);
 
 insert into products values ('p001', 'TV', 10, 2, 1000.00, 1);
 
+insert into suppliers values ('01', 'Saberists', 'New York', '478-120-2384', 'saber@comp.com');
+
 insert into purchases values (100000, 'e01', 'p001', 'c001', 2, SYSDATE, 1500.00);
 insert into purchases values (100001, 'e01', 'p001', 'c002', 1, SYSDATE, 750.00);
 insert into purchases values (100002, 'e01', 'p001', 'c002', 1, to_date('12-AUG-2017 10:34:30', 'DD-MON-YYYY HH24:MI:SS'), 750.00);
 insert into purchases values (100003, 'e02', 'p001', 'c001', 1, SYSDATE, 750.00);
+
+--Triggers for Question 6
+create or replace trigger insertCustomerTrigger
+after insert on customers
+for each row
+begin
+    insert into logs values (log#_seq.NEXTVAL, USER, 'Insert', SYSDATE, 'Customers', :NEW.cid);
+end;
+/
+
+create or replace trigger updateLastVisitTrigger
+after update of last_visit_date on customers
+for each row
+begin
+    insert into logs values (log#_seq.NEXTVAL, USER, 'Update', SYSDATE, 'Customers', :NEW.cid);
+end;
+/
+
+create or replace trigger updateQohTrigger
+after update of qoh on products
+for each row
+begin
+    insert into logs values (log#_seq.NEXTVAL, USER, 'Update', SYSDATE, 'Products', :NEW.pid);
+end;
+/
+
+create or replace trigger insertSuppliesTrigger
+after insert on supplies
+for each row
+begin
+    insert into logs values (log#_seq.NEXTVAL, USER, 'Insert', SYSDATE, 'Supplies', :NEW.sup#);
+
+    update products set qoh = (qoh + :NEW.quantity)
+    where pid = :NEW.pid;
+end;
+/
 
 create or replace package instructions as
 function showTable(tbl in varchar2)
