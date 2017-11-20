@@ -377,7 +377,7 @@ end;
 
 function getProductRow(pid in products.pid%type)
 return sys_refcursor
-is rc sys_refcursor
+is rc sys_refcursor;
 begin
     open rc for
     select *
