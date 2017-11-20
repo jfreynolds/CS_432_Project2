@@ -117,14 +117,6 @@ begin
 end;
 /
 
-create or replace trigger insertPurchasesTrigger
-after insert on purchases
-for each row
-begin
-    insert into logs values (log#_seq.NEXTVAL, USER, 'Insert', SYSDATE, 'Purchases', :NEW.pur#);
-end;
-/
-
 create or replace trigger updateQohTrigger
 after update of qoh on products
 for each row
@@ -144,6 +136,68 @@ begin
 end;
 /
 
+create or replace trigger insertPurchasesTrigger
+after insert on purchases
+for each row
+declare
+productRow products%rowtype;
+qohToSupply products.qoh%type;
+supplierCount number(5);
+firstSid supplies.sid%type;
+customerRow customers%rowtype;
+begin
+    dbms_output.put_line('Product ' || :NEW.pid || ' was just purchased.');
+
+    insert into logs values (log#_seq.NEXTVAL, USER, 'Insert', SYSDATE, 'Purchases', :NEW.pur#);
+
+    select * into productRow
+      from products
+     where pid = :NEW.pid;
+
+    update products set qoh = (productRow.qoh - :NEW.qty)
+     where pid = :NEW.pid;
+
+    select * into productRow
+      from products
+     where pid = :NEW.pid;
+
+    if(productRow.qoh_threshold > productRow.qoh) then
+        dbms_output.put_line('Product ' || productRow.pid || ' has qoh below its threshold. New supply is required');
+
+        qohToSupply := (productRow.qoh_threshold - productRow.qoh + 10) - 1;
+
+        select count(*) into supplierCount
+          from supplies
+         where pid = productRow.pid;
+
+        if(supplierCount < 1) then
+            raise_application_error(-20007, 'Product ' || productRow.pid || ' has never been supplied before. Unable to order more from a supplier.');
+        end if;
+
+        select sid into firstSID
+          from supplies
+         where pid = productRow.pid
+           and rownum = 1
+         order by sid asc;
+
+        insert into supplies values (sup#_seq.NEXTVAL, productRow.pid, firstSID, SYSDATE, qohToSupply);
+    end if;
+
+    select * into customerRow
+      from customers
+     where cid = :NEW.cid;
+
+    if(to_char(customerRow.last_visit_date, 'DD-MON-YYYY HH24:MI:SS') != to_char(:NEW.ptime, 'DD-MON-YYYY HH24:MI:SS')) then
+        update customers set visits_made = customerRow.visits_made + 1
+         where cid = customerRow.cid;
+
+        update customers set last_visit_date = :NEW.ptime
+         where cid = customerRow.cid;
+    end if;
+
+end;
+/
+
 create or replace package instructions as
 function showTable(tbl in varchar2)
 return sys_refcursor;
@@ -157,6 +211,11 @@ procedure monthly_sale_activities(eidArg in employees.eid%type,
 procedure add_customer(c_id in customers.cid%type,
                        c_name customers.name%type, 
                        c_telephone# customers.telephone#%type);
+
+procedure add_purchase(e_id in purchases.eid%type,
+                       p_id in purchases.pid%type,
+                       c_id in purchases.cid%type,
+                       pur_qty in purchases.qty%type);
 
 end instructions;
 /
@@ -262,6 +321,55 @@ exception
     --One of the string arguments is larger than defined in table
     when string_arg_too_big then
         raise_application_error(-20004, 'String argument passed into procedure is too long. Failed to add customer to table.');
+end;
+
+--Procedure for Question 7
+procedure add_purchase(e_id in purchases.eid%type,
+                       p_id in purchases.pid%type,
+                       c_id in purchases.cid%type,
+                       pur_qty in purchases.qty%type)
+is
+string_arg_too_big exception;
+pragma exception_init(string_arg_too_big, -12899);
+
+bad_foreign_key_value exception;
+pragma exception_init(bad_foreign_key_value, -02291);
+
+productRow products%rowtype;
+totalPrice purchases.total_price%type;
+discountRate discounts.discnt_rate%type;
+begin
+    if(e_id is NULL) then
+        raise_application_error(-20001, 'E_id argument is null');
+    elsif(p_id is NULL) then
+        raise_application_error(-20001, 'P_id argument is null');
+    elsif(c_id is NULL) then
+        raise_application_error(-20001, 'C_id argument is null');
+    elsif(pur_qty is NULL) then
+        raise_application_error(-20001, 'Pur_qty argument is null');
+    end if;
+
+    select * into productRow
+      from products
+     where pid = p_id;
+
+    if(pur_qty > productRow.qoh) then
+        raise_application_error(-20005, 'Product ' || productRow.pid || ' does not have enough stock to fulfill the purchase.');
+    end if;
+
+    select discnt_rate into discountRate
+      from discounts
+     where discnt_category = productRow.discnt_category; 
+
+    totalPrice := (productRow.original_price * (1 - discountRate));
+
+    insert into purchases values (pur#_seq.NEXTVAL, e_id, p_id, c_id, pur_qty, SYSDATE, totalPrice);
+exception
+    when string_arg_too_big then
+        raise_application_error(-20004, 'String argument passed into procedure is too long. Failed to add purchase to table.');
+
+    when bad_foreign_key_value then
+        raise_application_error(-20006, 'No parent key found for a foreign key value passed to procedure. Failed to add purchase to table.');
 end;
 
 end instructions;
