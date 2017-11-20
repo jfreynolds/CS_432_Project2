@@ -8,15 +8,22 @@ import oracle.jdbc.pool.OracleDataSource;
 public class instructions{
 	OracleDataSource ds;
 	Connection conn;
+	public boolean connected = true;
+
+	public instructions(){
+		connected = false;
+	}
+
 	public instructions(String user, String pass){
 		try{
 			ds = new oracle.jdbc.pool.OracleDataSource();
 			System.out.println("Attempting to connect...");
 			ds.setURL("jdbc:oracle:thin:@castor.cc.binghamton.edu:1521:acad111");
 			conn = ds.getConnection(user, pass);
+			connected = true;
 		}
-		catch (SQLException ex) { System.out.println ("\n*** SQLException caught ***\n" + ex.getMessage());}
-   		catch (Exception e) {System.out.println ("\n*** other Exception caught ***\n");}
+		catch (SQLException ex) {connected = false; System.out.println ("\n*** SQLException caught ***\n" + ex.getMessage());}
+   		catch (Exception e) {connected = false; System.out.println ("\n*** other Exception caught ***\n");}
 	}
 
 	public String showTable(String tblname){
@@ -108,5 +115,53 @@ public class instructions{
 		}
 		catch (SQLException ex) { System.out.println ("\n*** SQLException caught ***\n" + ex.getMessage());}
    		catch (Exception e) {System.out.println ("\n*** other Exception caught ***\n");}
+	}
+
+	public String addPurchase(String eid, String pid, String cid, String qty){
+		try{
+			String purSql = "begin instructions.add_purchase(?, ?, ?, ?); end;";
+			String proSql = "begin ? := instructions.getProductRow(?); end;";
+			CallableStatement purcs = conn.prepareCall(purSql);
+			purcs.setString(1, eid);
+			purcs.setString(2, pid);
+			purcs.setString(3, cid);
+			purcs.setString(4, qty);
+			CallableStatement procs = conn.prepareCall(proSql);
+			procs.registerOutParameter(1, OracleTypes.CURSOR);
+			procs.setString(2, pid);
+			
+			procs.execute();
+			ResultSet rs = (ResultSet)procs.getObject(1);
+			ResultSetMetaData rsmd = rs.getMetaData();
+			int numColumns = rsmd.getColumnCount();
+			String output = "";
+			int qohIndex, thrIndex;
+			qohIndex = thrIndex = -1;
+			for(int i = 1; i < numColumns; i++){
+				if(rsmd.getColumnName(i).equals("QOH"))
+					qohIndex = i;
+				if(rsmd.getColumnName(i).equals("QOH_THRESHOLD"))
+					thrIndex = i;
+			}
+			System.out.println(qohIndex + " " + thrIndex);
+			rs.next();
+			int qoh = Integer.parseInt(rs.getString(qohIndex));
+			int thr = Integer.parseInt(rs.getString(thrIndex));
+			if((qoh - Integer.parseInt(qty)) < thr){
+				output += "Quantity on hand is less than the threshold, ordering from supplier\n";
+			}
+			purcs.execute();
+			procs.execute();
+			rs = (ResultSet)procs.getObject(1);
+			rs.next();
+			if(!output.equals(""))
+				output += "Purchase complete. New quantity on hand is " + rs.getString(qohIndex);
+			if(output.equals(""))
+				output += "Purchase complete.";
+			return output; 
+		}
+		catch (SQLException ex) { System.out.println ("\n*** SQLException caught ***\n" + ex.getMessage());}
+   		catch (Exception e) {System.out.println ("\n*** other Exception caught ***\n");}
+		return "-1";
 	}
 }
