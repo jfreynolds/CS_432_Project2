@@ -383,6 +383,8 @@ begin
     select *
       from products pro
      where pid = pro.pid;
+
+    return rc;
 end;
 
 end instructions;
