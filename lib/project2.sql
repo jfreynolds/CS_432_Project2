@@ -1,22 +1,29 @@
---Run script to create all necessary tables
---TODO: Populate Tables
+--Run script to initialize everything needed for
+--Project 2
 
 --Create sequences (Question #1)
+--Used to generate pur# when inserting into
+--purchases table
 create sequence pur#_seq
 start with 100000
 maxvalue 999999
 increment by 1;
 
+--Used to generate sup# when ordering more
+--supply of a product after a purchase
 create sequence sup#_seq
 start with 1000
 maxvalue 9999
 increment by 1;
 
+--Used to generate log# when logging an
+--operation in the logs table
 create sequence log#_seq
 start with 10000
 maxvalue 99999
 increment by 1;
 
+--Drop any existing tables of same name
 drop table supplies;
 drop table suppliers;
 drop table purchases;
@@ -26,6 +33,7 @@ drop table logs;
 drop table employees;
 drop table customers;
 
+--Create necessary tables
 create table customers
 (cid char(4) primary key,
 name varchar2(15),
@@ -83,6 +91,7 @@ op_time date not null,
 table_name varchar2(20) not null,
 tuple_pkey varchar2(6)); 
 
+--Insert some preliminary test values
 insert into customers values ('c001', 'John Null', '123-456-7890', 1, SYSDATE);
 insert into customers values ('c002', 'John Reynolds', '555-555-5555', 3, SYSDATE);
 
@@ -101,6 +110,9 @@ insert into purchases values (100002, 'e01', 'p001', 'c002', 1, to_date('12-AUG-
 insert into purchases values (100003, 'e02', 'p001', 'c001', 1, SYSDATE, 750.00);
 
 --Triggers for Question 6
+
+--Insert tuple with required information into 
+--logs table after an insert on customers table
 create or replace trigger insertCustomerTrigger
 after insert on customers
 for each row
@@ -109,6 +121,9 @@ begin
 end;
 /
 
+--Insert tuple with required information into
+--logs table after an update of last_visit_date
+--on customers table
 create or replace trigger updateLastVisitTrigger
 after update of last_visit_date on customers
 for each row
@@ -117,6 +132,9 @@ begin
 end;
 /
 
+--Insert tuple with required information into
+--logs table after an update of qoh on
+--products table
 create or replace trigger updateQohTrigger
 after update of qoh on products
 for each row
@@ -125,6 +143,11 @@ begin
 end;
 /
 
+--Insert tuple with required information into
+--logs table after an insert on supplies table.
+--Then add the quantity of product supplied
+--to the existing product's qoh column
+--in products table
 create or replace trigger insertSuppliesTrigger
 after insert on supplies
 for each row
@@ -136,6 +159,17 @@ begin
 end;
 /
 
+--Insert tuple with required information into
+--logs table after an insert on supplies table.
+--Subtracts the purchase quantity from the
+--qoh column of products table for the purchased product.
+--Determine if the purchase brings the product's qoh
+--below the threshold. If so, purchase more of that
+--product from a previous supplier with the lowest
+--sid column value. Finally, adds 1 to the purchasing
+--customer's visits_made column and updates their 
+--last_visit_date column to the most recent purchase
+--if neccesary.
 create or replace trigger insertPurchasesTrigger
 after insert on purchases
 for each row
@@ -377,12 +411,14 @@ end;
 
 function getProductRow(pid in products.pid%type)
 return sys_refcursor
-is rc sys_refcursor
+is rc sys_refcursor;
 begin
     open rc for
     select *
       from products pro
      where pid = pro.pid;
+
+    return rc;
 end;
 
 end instructions;
