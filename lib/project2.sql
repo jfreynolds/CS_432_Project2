@@ -217,6 +217,9 @@ procedure add_purchase(e_id in purchases.eid%type,
                        c_id in purchases.cid%type,
                        pur_qty in purchases.qty%type);
 
+function getProductRow(pid in products.pid%type)
+return sys_refcursor;
+
 end instructions;
 /
 
@@ -370,6 +373,16 @@ exception
 
     when bad_foreign_key_value then
         raise_application_error(-20006, 'No parent key found for a foreign key value passed to procedure. Failed to add purchase to table.');
+end;
+
+function getProductRow(pid in products.pid%type)
+return sys_refcursor
+is rc sys_refcursor
+begin
+    open rc for
+    select *
+      from products pro
+     where pid = pro.pid;
 end;
 
 end instructions;
