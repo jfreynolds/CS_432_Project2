@@ -448,7 +448,7 @@ begin
       from discounts
      where discnt_category = productRow.discnt_category; 
 
-    totalPrice := (productRow.original_price * (1 - discountRate));
+    totalPrice := pur_qty * (productRow.original_price * (1 - discountRate));
 
     insert into purchases values (pur#_seq.NEXTVAL, e_id, p_id, c_id, pur_qty, SYSDATE, totalPrice);
 exception
