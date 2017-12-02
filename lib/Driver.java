@@ -2,11 +2,13 @@ import java.util.Scanner;
 import java.io.Console;
 
 public class Driver{
+	//Provides input prompts and displays requested data
 	public static void main(String args[]){
 		Scanner sc = new Scanner(System.in);
 		Console con = System.console();
 		boolean connected = false;
 		instructions inst = new instructions();
+		//Try to connect until correct user info is input
 		while(!connected){
 			System.out.println("enter username:");
 			String user = sc.nextLine();
@@ -14,45 +16,48 @@ public class Driver{
 			inst = new instructions(user, pass);
 			connected = inst.connected;
 		}
+
+		//Continuously loop checking for commands until exit is called
 		System.out.println("Connected. Type help for commands");
 		while(inst.connected){
 			String[] cmd = sc.nextLine().split(", ");
 			if(cmd[0].equals("show")){
 				if(cmd.length == 2)
-					System.out.println(inst.showTable(cmd[1]));
+					System.out.println(inst.showTable(cmd[1]));//print showTable results
 				else
 					System.out.println("Usage: show, tablename");
 			}
 			else if(cmd[0].equals("savings")){
 				if(cmd.length == 2)
-					System.out.println(inst.getSavings(cmd[1]));
+					System.out.println(inst.getSavings(cmd[1]));//print getSavings results
 				else
 					System.out.println("Usage: savings, purchase#");
 			}
 			else if(cmd[0].equals("sales")){
 				if(cmd.length == 2)
-					System.out.println(inst.getSaleActivity(cmd[1]));
+					System.out.println(inst.getSaleActivity(cmd[1]));//print getSaleActivity results
 				else
 					System.out.println("Usage: sales, eid");
 			}
 			else if(cmd[0].equals("addCustomer")){
 				if(cmd.length == 4){
 					inst.addCustomer(cmd[1], cmd[2], cmd[3]);
-					System.out.println("Added customer " + cmd[1]);
+					System.out.println("Added customer " + cmd[1]);//Call addCustomer and print if successful
 				}
 				else
 					System.out.println("Usage: addCustomer, cid, name, telephone#");
 			}
 			else if(cmd[0].equals("addPurchase")){
 				if(cmd.length == 5){
-					System.out.println(inst.addPurchase(cmd[1], cmd[2], cmd[3], cmd[4]));
+					System.out.println(inst.addPurchase(cmd[1], cmd[2], cmd[3], cmd[4]));// call addPurchase and print details
 				}
 				else
 					System.out.println("Usage: addPurchase, eid, pid, cid, qty");
 			}
 			else if(cmd[0].equals("exit")){
-				break;
+				break;//quit out of program
 			}
+			//Display input command list with format.
 			else if(cmd[0].equals("help")){
 				System.out.println("show, tablename\n\t Display contents of table specified by tablename\n");
 				System.out.println("savings, purchase#\n\t Calculate and display savings for a specific purchase\n");
